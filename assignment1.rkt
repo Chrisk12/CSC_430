@@ -63,7 +63,7 @@
 (test (derivative (quadratic 1 2 3)) (linear 2 2))
 (test (derivative (quadratic 5 10 15)) (linear 10 10))
 
-; 2.5 Defining a binary tree =================ASK==================
+; 2.5 Defining a binary tree 
 (define-type BTree
   [leaf (sym : symbol)]
   [node (left : BTree) (right : BTree)])
@@ -74,7 +74,7 @@
 (define t4 (node t1 t2))
 (define t5 (node t3 t4))
 
-; 2.6 Mirroring a Binary Tree
+; 2.6 Mirrors and returns a new Binary Tree
 (define (mirror [tree : BTree]) : BTree
    (type-case BTree tree
      [leaf (leav) (leaf leav)]
