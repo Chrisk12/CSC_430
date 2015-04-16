@@ -1,0 +1,8 @@
+(define t1 (leaf 'left))
+(define t2 (leaf 'right))
+(define t3 (leaf 'stephen))
+(define t4 (node t1 t2))
+(define t5 (node t3 t4))
+(test (min-depth t1) 0)
+(test (min-depth t4) 1)
+(test (min-depth t5) 1)

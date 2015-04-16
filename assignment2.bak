@@ -1,0 +1,83 @@
+#lang plai-typed
+
+; 1.6 AutoTabbing
+#;(define (show-example b)
+  (begin
+    ( "magnitude of sum of elements: ~s\n"
+            (array-map magnitude (array-axis-fold (my-fft b) 0 + 0)))
+    
+    (printf "sum of magnitude of elements: ~s\n"
+            (array-axis-fold (array-map magnitude (my-fft b)) 0 + 0))
+    
+    (plot (points (in-array (array->plottable (my-fft b))))
+          #:y-max 1500
+          #:x-max 1024
+          #:height 300)))
+#;printf
+
+; 1.7
+
+#;((define (srl:map-append func lst)
+  (if (null? lst)
+      lst
+      (append (func (car lst))
+              (srl:map-append func (cdr lst))))))
+
+; Lab 2 Exercises
+
+; 3 Actual Brain Exercise
+
+; 3.1 Creates a string in reverse of the items in a list.
+(define (rev-str-app [l : (listof string)]) : string
+  (cond [(empty? l) ""]
+  [else
+   (string-append (rev-str-app (rest l)) (first l))]))
+
+(test (rev-str-app (list "ball" "juice" "frog")) "frogjuiceball")
+(test (rev-str-app empty) "")
+
+; 3.2 Defines a representation for a processor
+(define-type Processor
+  [Intel (i : number)]
+  [AMD (i : number)]
+  [ARM (i : number)])
+
+; 3.3 Takes a list of prcessors and returns a list containing only Intels
+(define intels (Intel 5))
+(define l (list intels (AMD 6) (ARM 10)))
+
+(define (onlyIntels [processList : (listof Processor)]) : (listof Processor)
+  (cond [(empty? processList) empty]
+        [else 
+         (type-case Processor (first processList)
+           [Intel(i) (cons (first processList) (onlyIntels (rest processList)))]
+           [AMD(i) (onlyIntels (rest processList))]
+           [ARM(i) (onlyIntels (rest processList))])]))
+
+(test (onlyIntels l) (list intels))
+(test (onlyIntels empty) empty)
+
+; 3.4 Takes a list of prcessors and returns a list containing only AMD
+
+(define (onlyAMDs [processList : (listof Processor)]) : (listof Processor)
+  (cond [(empty? processList) empty]
+        [else 
+         (type-case Processor (first processList)
+           [Intel(i) (onlyAMDs (rest processList))]
+           [AMD(i) (cons (first processList) (onlyAMDs (rest processList)))]
+           [ARM(i) (onlyAMDs (rest processList))])]))
+
+(test (onlyAMDs l) (list (AMD 6)))
+(test (onlyAMDs empty) empty)
+
+; 3.5 Generalizes 3.4 and 3.3. consumes a list of processors and a particular processor 
+; predicate and returns a list of only those elements.
+
+(define (onlyThese [l : (listof Processor)] [f : (Processor -> boolean)]) : (listof Processor)
+  (cond [(empty? l) empty]
+        [(f (first l)) (cons (first l) (onlyThese (rest l) f))]
+        [else (onlyThese (rest l) f)]))
+
+(test (onlyThese l AMD?) (list (AMD 6)))
+(test (onlyThese l Intel?) (list intels))
+(test (onlyThese empty AMD?) empty)
