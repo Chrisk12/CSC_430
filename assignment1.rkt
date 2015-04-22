@@ -9,16 +9,17 @@
 (test (total-profit 2) -11)
 
 ;defining pi to be used for the next problem
-(define PI 3.14)
+(define PI 3.14159265358979323846264338327950288419716939937510582097494459230781640)
 ; Ex 3.3.3 Calculates the area of a cylinder
 
 (define (area-cylinder [r : number] [h : number]) : number
   (+ (* (* (* 2 PI) r) h) (* 2 (* PI (* r r)))))
   
 (test (area-cylinder 5 10) (* 150 PI))
-(test (area-cylinder 10 5) 942)
+(test (area-cylinder 10 5) 942.477)
 (test (area-cylinder 2 3) (* 20 PI))
 (test (area-cylinder 3 4) (* 42 PI))
+(test (area-cylinder 4 0) 100.5309)
 
 ; 2.2
 ; Represent a writing implement
@@ -47,11 +48,12 @@
 (define (eval [poly : Polynomial] [x : number]) : number
   (type-case Polynomial poly
     [linear (a b) (+ (* a x) b)]
-    [quadratic (a b c) (+ (+ (+ a (* x x)) (* b x)) c)]))
+    [quadratic (a b c) (+ (+ (* a (* x x)) (* b x)) c)]))
 
 (test (eval (linear 5 10) 3) 25)
-(test (eval (quadratic 1 2 3) 4) 28)
-(test (eval (quadratic 5 10 15) 20) 620)
+(test (eval (quadratic 1 2 3) 4) 27)
+(test (eval (quadratic 5 10 15) 20) 2215)
+(test (eval (quadratic 1.1 1.2 1.3) 4) 23.700000000000000000000000003)
 
 ; 2.4 Computes the Derivative of a Polynomial
 (define (derivative [poly : Polynomial]) : Polynomial

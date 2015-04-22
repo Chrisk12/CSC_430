@@ -91,6 +91,29 @@
     [leaf (leav) 0]
     [node (left right) (+ 1 (min (min-depth left) (min-depth right)))]))
 
-(test (min-depth t1) 0)
-(test (min-depth t4) 1)
-(test (min-depth t5) 1)
+;Captian Teach Test Cases
+(define btree1 (leaf 'a))
+(define btree2 (node (leaf 'b) (leaf 'c)))
+(define btree3 (node (node (leaf 'd) (leaf 'e)) btree1))
+(define btree4 (node btree3 btree3))
+(define btree3-mirror (node btree1 (node (leaf 'e) (leaf 'd))))
+(define btree4-mirror (node btree3-mirror btree3-mirror))
+
+(test (min-depth btree1) 0)
+(test (min-depth btree2) 1)
+(test (min-depth btree3) 1)
+(test (min-depth btree4) 2)
+(test (min-depth btree3-mirror) 1)
+(test (min-depth btree4-mirror) 2)
+
+(define l1 (leaf 'z))
+(define l2 (leaf 'y))
+(define l3 (leaf 'c))
+(define l4 (leaf 'v))
+(define n (node l1 l2))
+(define n2 (node l3 l4))
+(define r (node n n2))
+
+(test (min-depth n) 1)
+(test (min-depth r) 2)
+(test (min-depth l1) 0)
