@@ -1,47 +1,79 @@
 #lang plai-typed
+(require plai-typed/s-exp-match)
 
-; 3.8 Defining ArithC from Chap 3
-(define-type ArithC
+; Defines a datatype for functions to be represented as
+(define-type FunDefC
+  [fdC (name : symbol) (arg : symbol) (body : ExprC)])
+
+; Defines Experc
+(define-type ExprC
   [numC (n : number)]
   [idC (s : symbol)]
-  [appC (fun : symbol) (arg : ArithC)]
-  [plusC (l : ArithC) (r : ArithC)]
-  [multC (l : ArithC) (r : ArithC)])
+  [appC (fun : symbol) (arg : ExprC)]
+  [plusC (l : ExprC) (r : ExprC)]
+  [multC (l : ExprC) (r : ExprC)]
+  [if0 (t : ExprC) (iff : ExprC) (ffi : ExprC)])
 
-; 3.9 Defining eval for the ArithC 
-(define (eval [a : ArithC] [fds : (listof FunDefC)]) : number
-  (type-case ArithC a
+; Defines the Interpreter / OUR EVAL
+(define (interp [e : ExprC] [fds : (listof FunDefC)]) : number
+  (type-case ExprC e
     [numC (n) n]
     [idC (_) (error 'interp "shouldn't get here")]
     [appC (f a) (local ([define fd (get-fundef f fds)])
-                  (eval (subst a (fdC-arg fd) (fdC-body fd)) fds))]
+                  (interp (subst a (fdC-arg fd) (fdC-body fd)) fds))]
     
-    [plusC (l r) (+ (eval l fds) (eval r fds))]
-    [multC (l r) (* (eval l fds) (eval r fds))]))
+    [plusC (l r) (+ (interp l fds) (interp r fds))]
+    [multC (l r) (* (interp l fds) (interp r fds))]
+    [if0 (t iff ffi) (error 'interp "hi")]))
 
-(test (eval (numC 3) empty) 3)
-(test (eval (plusC (numC 3) (numC 3)) empty) 6)
-(test (eval (multC (numC 3) (numC 3)) empty) 9)
+(test (interp (numC 5) (list (fdC 'stephen '+ (numC 5)))) 5)
+(test (interp (numC 5) empty) 5)
+(test/exn (interp (idC 'stephen) empty) "shouldn't get here")
+(test (interp (plusC (numC 5) (numC 10)) empty) 15)
+(test (interp (multC (numC 5) (numC 10)) empty) 50)
+;(test (interp (appC 'stephen (numC 10)) empty) 50)
+
+; Defines the substition 
+(define (subst [what : ExprC] [for : symbol] [in : ExprC]) : ExprC
+  (type-case ExprC in
+    [numC (n) in]
+    [idC (s) (cond [(symbol=? s for) what]
+                   [else in])]
+    [appC (f a) (appC f (subst what for a))]
+    [plusC (l r) (plusC (subst what for l)
+                        (subst what for r))]
+    [multC (l r) (multC (subst what for l)
+                        (subst what for r))]
+    [if0 (t iff fii) (error 'sust "error")]))
+
+(test (subst (numC 5) 'x (numC 5)) (numC 5))
+
+  ; Get Funds ===EXPLAIN BETTER===
+  (define (get-fundef [n : symbol] [fds : (listof FunDefC)]) : FunDefC
+    (cond
+      [(empty? fds) (error 'get-fundef "reference to undefined function")]
+      [(cons? fds) (cond
+                     [(equal? n (fdC-name (first fds))) (first fds)]
+                     [else (get-fundef n (rest fds))])]))
 
 ; 3.11 Defining a parser
-
-(define (parse [s : s-expression]) : ArithC
+(define (parse [s : s-expression]) : ExprC
   (cond
     [(s-exp-number? s) (numC (s-exp->number s))]
-    [(s-exp-list? s)
-     (let ([sl (s-exp->list s)])
-       (case (s-exp->symbol (first sl))
-         [(+) (plusC (parse (second sl)) (parse (third sl)))]
-         [(*) (multC (parse (second sl)) (parse (third sl)))]
-         [else (error 'parse "invalid list input")]))]
+    [(s-exp-match? '{+ ANY ANY} s)
+     (plusC (parse (second (s-exp->list s))) (parse (third (s-exp->list s))))]
+    [(s-exp-match? '{* ANY ANY} s)
+     (multC (parse (second (s-exp->list s))) (parse (third (s-exp->list s))))]
+    [(s-exp-match? '{if0 ANY ANY ANY} s) (if0 
+                                          (parse (second (s-exp->list s))) 
+                                          (parse (third (s-exp->list s)))
+                                          (parse (fourth (s-exp->list s))))]
     [else (error 'parse "invalid input :(")]))
 
-
-
-; 3.12 Accepts and S express and call parser and then the eval functions
 (define (parse-eval [s : s-expression]) : number
-  (eval (parse s) empty))
+  (interp (parse s) empty))
 
+(test/exn (parse-eval '{if0 (numC 5) (numC 5) (numC 5)}) "I found the if")
 (test (parse-eval '{+ {* 1 2} {+ 2 3}}) 7)
 (test (parse-eval '{+ 3 {+ {* 1 2} {+ 2 3}}}) 10)
 (test/exn (parse-eval '{+ 3 {+ {* 1 "d"} {+ 2 3}}}) "invalid input :(")
@@ -52,31 +84,8 @@
 (test/exn (parse-eval '{+ 3 3 3 3 3 3}) "invalid input :(")
 (test/exn (parse-eval '{+}) "invalid input :(")
 
-; Assignment 2 Code
+
+;======================================
 #;(define (top-eval [s : s-expression] [fun-sexps : (listof s-expression)])  : number  
   (eval (parse s) (map parse-fundef fun-sexps)))
-
-; A function definition
-(define-type FunDefC
-  [fdC (name : symbol) (arg : symbol) (body : ArithC)])
-
-; Defining substition
-(define (subst [what : ArithC] [for : symbol] [in : ArithC]) : ArithC
-  (type-case ArithC in
-    [numC (n) in]
-    [idC (s) (cond
-               [(symbol=? s for) what]
-               [else in])]
-    [appC (f a) (appC f (subst what for a))]
-    [plusC (l r) (plusC (subst what for l)
-                        (subst what for r))]
-    [multC (l r) (multC (subst what for l)
-                        (subst what for r))]))
-
-; Defining get function
-(define (get-fundef [n : symbol] [fds : (listof FunDefC)]) : FunDefC
-  (cond
-    [(empty? fds) (error 'get-fundef "reference to undefined function")]
-    [(cons? fds) (cond
-                   [(equal? n (fdC-name (first fds))) (first fds)]
-                   [else (get-fundef n (rest fds))])]))
+ 
