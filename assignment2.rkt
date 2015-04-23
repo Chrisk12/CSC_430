@@ -24,14 +24,9 @@
     
     [plusC (l r) (+ (interp l fds) (interp r fds))]
     [multC (l r) (* (interp l fds) (interp r fds))]
-    [if0 (t iff ffi) (error 'interp "hi")]))
-
-(test (interp (numC 5) (list (fdC 'stephen '+ (numC 5)))) 5)
-(test (interp (numC 5) empty) 5)
-(test/exn (interp (idC 'stephen) empty) "shouldn't get here")
-(test (interp (plusC (numC 5) (numC 10)) empty) 15)
-(test (interp (multC (numC 5) (numC 10)) empty) 50)
-;(test (interp (appC 'stephen (numC 10)) empty) 50)
+    [if0 (t iff ffi) (cond [(<= (interp t fds) 0) (interp iff fds)]
+                           [else (interp ffi fds)]
+                            )]))
 
 ; Defines the substition 
 (define (subst [what : ExprC] [for : symbol] [in : ExprC]) : ExprC
@@ -46,8 +41,7 @@
                         (subst what for r))]
     [if0 (t iff fii) (error 'sust "error")]))
 
-(test (subst (numC 5) 'x (numC 5)) (numC 5))
-
+ 
   ; Get Funds ===EXPLAIN BETTER===
   (define (get-fundef [n : symbol] [fds : (listof FunDefC)]) : FunDefC
     (cond
@@ -72,17 +66,9 @@
 
 (define (parse-eval [s : s-expression]) : number
   (interp (parse s) empty))
+ 
+(test/exn (parse-eval '{if0  2 10 {+ 2 3}}) "I found the if")
 
-(test/exn (parse-eval '{if0 (numC 5) (numC 5) (numC 5)}) "I found the if")
-(test (parse-eval '{+ {* 1 2} {+ 2 3}}) 7)
-(test (parse-eval '{+ 3 {+ {* 1 2} {+ 2 3}}}) 10)
-(test/exn (parse-eval '{+ 3 {+ {* 1 "d"} {+ 2 3}}}) "invalid input :(")
-
-(test (parse-eval '{+ {* 1 2} {+ 2 3}}) 7)
-(test/exn (parse-eval '{% 3 {+ {* 1 2} {+ 2 3}}}) "invalid input :(")
-(test/exn (parse-eval '{+ {% 1 2} {^ 2 3}}) "invalid input :(")
-(test/exn (parse-eval '{+ 3 3 3 3 3 3}) "invalid input :(")
-(test/exn (parse-eval '{+}) "invalid input :(")
 
 
 ;======================================
