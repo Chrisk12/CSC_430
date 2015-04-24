@@ -85,6 +85,15 @@
      (fdC (s-exp->symbol (second (s-exp->list s))) (create-list s) (parse (fourth (s-exp->list s))))]
     [else (error 'parse "wrong arity")]))
  
+ 
+ 
+;this needs to be tested
+(define (check-list [l : (listof symbol)] : boolean
+    (check-dupes (first l) (rest l))))
+
+(define (check-dupes [s : symbol] [l : (listof symbol)]) : boolean
+    (cond [(empty? l) true]
+          [else (and (and (not (eq? s (first l))) (check-dupes s (rest l))) (check-list (rest l)))]))
 
 (test (interp (parse '{f 1})
             (list (parse-fundef '{fn f {x} {+ 1 1}}))) 3)
