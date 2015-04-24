@@ -22,11 +22,20 @@
                            [else (interp ffi fds)]
                            )]))
 
+; Searches through a list of symbols to see if a symbol is in the list.
+(define (check-in-list [s : symbol] [lst : (listof symbol)]) : boolean
+  (cond [(empty? lst) false]
+        [(symbol=? s (first lst)) true]
+        [else (check-in-list s (rest lst))]))
+
+(test (check-in-list 'a (list 'b 'c)) false)
+(test (check-in-list 'a (list 'b 'a)) false)
+
 ; Defines the substition
-(define (subst [what : ExprC] [for : symbol] [in : ExprC]) : ExprC
+(define (subst [what : ExprC] [for : (listof symbol)] [in : ExprC]) : ExprC
   (type-case ExprC in
-    [numC (n) in]
-    [idC (s) (cond [(symbol=? s for) what]
+    [numC (n) in];THIS IS BROKEN NOW IDC
+    [idC (s) (cond [(symbol=? s (first for)) what]
                    [else in])]
     [appC (f a) (appC f (subst what for a))]
     [if0 (t iff fii) (error 'sust "error")]
@@ -64,17 +73,21 @@
 
 ; Defines a datatype for functions to be represented as
 (define-type FunDefC
-  [fdC (name : symbol) (arg : symbol) (body : ExprC)])
+  [fdC (name : symbol) (arg : (listof symbol)) (body : ExprC)])
 
+(define (create-list [s : s-expression]) : (listof symbol)
+  (map s-exp->symbol (s-exp->list (third (s-exp->list s)))))
+
+  
 (define (parse-fundef [s : s-expression]) : FunDefC
   (cond
     [(s-exp-match? '{fn ANY ANY ANY} s)
-     (fdC (s-exp->symbol (second (s-exp->list s))) (s-exp->symbol (third (s-exp->list s))) (parse (fourth (s-exp->list s))))]
+     (fdC (s-exp->symbol (second (s-exp->list s))) (create-list s) (parse (fourth (s-exp->list s))))]
     [else (error 'parse "wrong arity")]))
-
+ 
 
 (test (interp (parse '{f 1})
-            (list (parse-fundef '{fn f x {+ 1 1}}))) 3)
+            (list (parse-fundef '{fn f {x} {+ 1 1}}))) 3)
 (test (interp (parse '{+ {f} {f}})
             (list (parse-fundef '{fn f {} 5}))) 10)
 (test/exn (interp (parse '{f 1})
