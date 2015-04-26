@@ -2,7 +2,7 @@
 (require plai-typed/s-exp-match)
 (print-only-errors true)
 
-; Defines Experc
+; Defines Exprc
 (define-type ExprC
   [numC (n : number)]
   [idC (s : symbol)]
@@ -17,15 +17,13 @@
     [idC (_) (error 'eval "shouldn't get here")]
     [appC (f a) (local ([define fd (get-fundef f fds)])
                   (cond [(not (= (length (fdC-arg fd)) (length a)))
-                                 (error 'eval "wrong arity")]
-                        [else
+                         (error 'eval "wrong arity")]
+                        [else 
                          (eval  (subst a (fdC-arg fd) (fdC-body fd)) fds)]))]
     
     [binop (s l r) ((get-binop s) (eval l fds) (eval r fds))]
-    
     [ifleq0 (t iff ffi) (cond [(<= (eval t fds) 0) (eval iff fds)]
-                              [else (eval ffi fds)]
-                              )]))
+                              [else (eval ffi fds)])]))
 
 ; Checks to see if a symbol is a binary operator
 (define (check-if-binop [s : symbol]) : boolean
@@ -34,7 +32,6 @@
         [(eq? s '-) true]
         [(eq? s '/) true]
         [else false]))
-
 
 ; Checks to see if a symbol is a reserved symbol
 (define (check-if-reserved-symbol [s : symbol]) : boolean
@@ -45,15 +42,14 @@
         [(eq? s 'ifleq0) true]
         [else false]))
 
-; Gets the function assocatioted with the
-; binary operator
-(define (get-binop [s : symbol])
+; Gets the function associated with the binary operator
+(define (get-binop [s : symbol]) : (number number -> number)
   (cond [(eq? s '+) +]
         [(eq? s '*) *]
         [(eq? s '-) -]
         [(eq? s '/) /]
         [else (error 'get-binop "NOT A BINOP")]))
- 
+
 ; Searches through a list of symbols to see if a symbol is in the list.
 (define (check-in-list [s : symbol] [lst : (listof symbol)]) : boolean
   (cond [(empty? lst) false]
@@ -100,23 +96,25 @@
 (define (get-fundef [n : symbol] [fds : (listof FunDefC)]) : FunDefC
   (cond
     [(empty? fds) (error 'get-fundef "reference to undefined function")]
-    [(cons? fds) (cond
+    [(cons? fds) (cond 
                    [(equal? n (fdC-name (first fds))) (first fds)]
                    [else (get-fundef n (rest fds))])]))
 
-
-; 3.11 Defining a parser
+; 3.11 Defining a parser that does much more than the lab. 
+; Lots of error checking done.
 (define (parse [s : s-expression]) : ExprC
   (cond
     [(s-exp-number? s) (numC (s-exp->number s))]
-    [(s-exp-symbol? s) (idC (s-exp->symbol s))]
+    [(s-exp-symbol? s) 
+     (cond [(check-if-reserved-symbol (s-exp->symbol s)) 
+            (error 'parse "invalid input :(")]
+           [else (idC (s-exp->symbol s))])]
     [(s-exp-match? '{ifleq0 ANY ANY ANY} s) (ifleq0
-                                          (parse (second (s-exp->list s)))
-                                          (parse (third (s-exp->list s)))
-                                          (parse (fourth (s-exp->list s))))]
+                                             (parse (second (s-exp->list s)))
+                                             (parse (third (s-exp->list s)))
+                                             (parse (fourth (s-exp->list s))))]
     [(and (s-exp-symbol? (first (s-exp->list s)))
-          (not 
-           (check-if-reserved-symbol (s-exp->symbol (first (s-exp->list s))))))
+          (not(check-if-reserved-symbol (s-exp->symbol (first (s-exp->list s))))))
      (create-appC  s)]
     [(s-exp-match? '{SYMBOL ANY ANY} s)
      (cond [(test-of-operators s second) (error 'parse "invalid input :(")]
@@ -132,7 +130,7 @@
                            [position : ((listof 'a) -> 'a)]) : boolean
   (and (s-exp-symbol? (position (s-exp->list s))) 
        (check-if-reserved-symbol (s-exp->symbol (position (s-exp->list s)))))) 
- 
+
 ;Creates and appC by using the map operator on an S expression
 (define (create-appC [s : s-expression]) :  ExprC
   (appC (s-exp->symbol(first (s-exp->list s)))
@@ -151,21 +149,21 @@
   (cond
     [(s-exp-match? '{fn SYMBOL ANY ANY} s)
      (cond [(test-of-operators s second) (error 'parse "invalid input :(")]
-     [else (fdC (s-exp->symbol (second (s-exp->list s)))
-          (create-list s)
-          (parse (fourth (s-exp->list s))))])]
+           [else (fdC (s-exp->symbol (second (s-exp->list s)))
+                      (create-list s)
+                      (parse (fourth (s-exp->list s))))])]
     [else (error 'parse "Function is of the wrong type :(")]))
 
 ;Check to see if a list has duplicets.
 (define (list-has-no-dups [l : (listof symbol)]) : boolean
   (cond [(empty? l) true]
         [else (check-dupes (first l) (rest l))]))
- 
+
 ; Takes a symbol and a list and checkes whether that symbol is in the list
 (define (check-dupes [s : symbol] [l : (listof symbol)]) : boolean
-    (cond [(empty? l) true]
-          [else (and (and (not (eq? s (first l))) (check-dupes s (rest l)))
-                     (list-has-no-dups (rest l)))]))
+  (cond [(empty? l) true]
+        [else (and (and (not (eq? s (first l))) (check-dupes s (rest l)))
+                   (list-has-no-dups (rest l)))]))
 
 ; Used for testing because of lab 2
 (define (parse-eval [s : s-expression]) : number
@@ -174,8 +172,8 @@
 ; Parses the s expression and the list of function expressions and then 
 ; calls eval
 (define (top-eval [s : s-expression] [fun-sexps : (listof s-expression)]) : number
-    (eval (parse s) (map parse-fundef fun-sexps)))
- 
+  (eval (parse s) (map parse-fundef fun-sexps)))
+
 ;===============TEST CASES=======================
 
 (test (top-eval '{+ 1 1} empty) 2)
@@ -187,7 +185,7 @@
 (test (parse-eval '{+ {* 1 2} {+ 2 3}}) 7)
 
 (test (eval (parse '{f 1}) (list (parse-fundef '{fn p {x} {+ x 1}})
-                                   (parse-fundef '{fn f {x} {+ x 1}}))) 2)
+                                 (parse-fundef '{fn f {x} {+ x 1}}))) 2)
 
 (test (eval (parse '{f 1}) (list (parse-fundef '{fn f {x} {+ x 1}}))) 2)
 (test (eval (parse '{+ {f} {f}}) (list (parse-fundef '{fn f {} 5}))) 10)
@@ -251,3 +249,4 @@
 (test/exn (parse '{+ + *}) "invalid input :(") 
 (test/exn (parse-fundef '{fn + () 13}) "invalid input :(")
 (test/exn (parse '{ifleq0}) "invalid input :(")
+(test/exn (parse `ifleq0) "invalid input :(")
