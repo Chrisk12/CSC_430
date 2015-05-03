@@ -37,11 +37,9 @@
     [booleanC (b) (booleanV b)]
     [idC (n) (lookup n env)]
     [appC (f a) (local ([define f-value (eval f env)])
-                  (eval (closV-body f-value)      ;(FIRST MIGHT BREAK STUFF)
-                        (get-list-binding a (closV-arg f-value) env)))]
-    ;(extend-env (bind (first (fdC-arg fd)) (eval (first a) env fds)) mt-env)
+                  (eval (closV-body f-value) 
+                         (get-list-binding (closV-arg f-value) a (closV-env f-value))))]
     [lamC (param body) (closV param body env)]
-    
     [binop (s l r) ((get-binop s) (eval l env) (eval r env))]
     [if (t iff ffi) (cond 
                       [(not (booleanV? (eval t env))) 
@@ -50,13 +48,14 @@
                           [else (eval ffi env)])]))
  
 ; Creates a list of binding from teh fdC-Arg and teh argument to the function
-(define (get-list-binding [a : (listof ExprC)]
-                          [syms : (listof symbol)]
+(define (get-list-binding [syms : (listof symbol)]
+                          [a : (listof ExprC)]
                           [env : Env]) : (listof Binding)
-  (cond [(empty? a) empty]
+  (cond [(empty? a) env]
         ;[(not (= (length syms) (length a))) (error 'get-list-bing "Wrong Size)")]
-        [else (cons (bind (first syms) (eval (first a) env)) (get-list-binding (rest a) (rest syms) env))]))
+        [else (cons (bind (first syms) (eval (first a) env)) (get-list-binding (rest syms) (rest a) env))]))
 
+;(test (get-list-binding (list 'a 'b 'c 'd) (numC 1) (numC 2) (numC 3)))
 ; Looks for a symbol in an env and returns the number that is 
 ; represented by the symbol.
 (define (lookup [for : symbol] [env : Env]) : Value
@@ -183,11 +182,12 @@
                       (not (list-has-no-dups 
                             (get-params (list->s-exp           
                                          (rest(s-exp->list s))) empty))))])
-       
-       (appC (lamC 
-              params 
-              (get-values args))
-             (get-list-exprC args empty)))]
+       (cond [truth (error 'with "dups")]
+             [else 
+              (appC (lamC 
+                     params 
+                     (get-values args))
+                    (get-list-exprC args empty))]))]
     
     [(s-exp-match? '{if ANY ANY ANY} s) (if
                                          (parse (second (s-exp->list s)))
@@ -197,21 +197,20 @@
     [(s-exp-match? '{fn {SYMBOL ...} ANY} s)
      (let ([truth (or (not-valid-symbols? (create-list s))
                       (not (list-has-no-dups (create-list s))))])
-       (lamC 
-        (create-list s)
-        (parse (third (s-exp->list s)))))]
-    
-   #; [(and (s-exp-symbol? (first (s-exp->list s)))
-          (not(check-if-reserved-symbol (s-exp->symbol (first (s-exp->list s))))))
-     (create-appC  s)]
-    
+       (cond [truth (error 'fn "duplicate symbols")]
+             [else
+              (lamC 
+               (create-list s)
+               (parse (third (s-exp->list s))))]))]
+   
     [(s-exp-match? '{SYMBOL ANY ANY} s)
      (cond [(test-of-operators s second) (error 'parse "invalid input :(")]
            [(test-of-operators s third) (error 'parse "invalid input :(")]
            [(check-if-binop(s-exp->symbol (first (s-exp->list s))))  
             (binop (s-exp->symbol (first (s-exp->list s)))
                    (parse (second (s-exp->list s))) 
-                   (parse (third (s-exp->list s))))])]
+                   (parse (third (s-exp->list s))))]
+           [else (create-appC s)])]
     
     [(s-exp-match? '{ANY ANY ...} s)
      (create-appC s)]))
@@ -222,7 +221,7 @@
   (cond [(empty? syms) false]
         [(check-if-reserved-symbol (first syms)) (error 'not-valid "Invalid input")]
         [else (not-valid-symbols? (rest syms))]))
-
+  
 ; Checks if a symbol is a boolean
 (define (check-if-boolean [s : symbol])
   (cond [(or (equal? s 'true) (equal? s 'false)) true]
@@ -295,13 +294,18 @@
 ; Takes a Value and outputs the string version of it
 (define (serialize [e : Value]) : string
   (cond [(numV? e) (to-string (numV-n e))]
-        [else (to-string (booleanV-b e))]))
- 
-#;(test (eval (appC (lamC (list 'f1 'x) 
-                        (appC (lamC (list 'f2 'y) (binop '+ (idC 'x) (idC 'y))) (list (numC 4)))) 
-                  (list (numC 3))) (list (bind 'x (numV 3)) (bind 'y (numV 6)))) (numV 5))
- 
+        [(booleanV? e) 
+         (cond [(booleanV-b e) "true"]
+               [else "false"])]
+        [(closV? e) "#<procedure>"]))
+
 ;===============TEST CASES=======================
+(test (serialize (booleanV true)) "true")
+(test (serialize (booleanV false)) "false")
+(test (eval (parse '{{fn {seven} (seven)} 
+                     {{fn {minus} {fn {} (minus (+ 3 10) (* 2 3))}} 
+                      {fn {x y} (+ x (* -1 y))}}}) empty) (numV 7))
+
 (test (parse `3) (numC 3))
 (test (parse `xxx) (idC 'xxx))
 (test (parse '{+ 5 2}) (binop '+ (numC 5) (numC 2)))
@@ -352,13 +356,13 @@
 (test (eval (parse '{if true 3 5}) empty) (numV 3))
 (test (eval (parse '{if #f 3 5}) empty) (numV 5))
 (test (serialize (numV 3)) "3")
-(test (serialize (booleanV true)) "#t")
+(test (serialize (booleanV true)) "true")
 (test (parse '{with {z = {+ 9 14}} {y = 98} {+ z y}}) 
       (appC (lamC (list 'z 'y) (binop '+ (idC 'z) (idC 'y))) 
             (list (binop '+ (numC 9) (numC 14)) (numC 98))))
  (test (parse `true) (booleanC true))
 ;(test (top-eval '{if (<= {+ 1 11} 10) 5 10}) (numV 10))
-
+(test/exn (parse '{fn {x x} 3}) "dup")
 (test (top-eval `1) "1")
 (test (parse '{{+ 3 5} {<= 5 3}}) (appC (binop '+ (numC 3) (numC 5)) (list (binop '<= (numC 5) (numC 3)))))
 ;(test (eval (if (>= (numC 0) 0) (numC 5) (numC 10)) empty ) (numV 5))
@@ -422,6 +426,9 @@
 (test (check-if-reserved-symbol 'false) true)
 (test (check-if-reserved-symbol 'with) true)
 (test (check-if-reserved-symbol 'fn) true)
+(test (serialize (closV empty (numC 3) empty)) "#<procedure>")
+(test/exn (parse '{with {z = {fn {} 3}} {z = 9} {z}}) "dups")
+(test (top-eval '{(fn (minus) (minus 8 5)) (fn (a b) (+ a (* -1 b)))}) "3") 
 
 ; ======= DEPRECATED CODE =============
 
@@ -463,7 +470,7 @@
                 (list (parse-fundef '{fn seven () (minus (+ 3 10) (* 2 3))}) 
                       (parse-fundef '{fn minus (x y) (+ x (* -1 y))}))) 7)
     (test/exn (parse-fundef '{fn + () 13}) "invalid input :(")
-    )
+    ) 
 
 ; ==== CODE ====
 
@@ -531,4 +538,45 @@
                     (create-list s)
                     (parse (fourth (s-exp->list s))))])]
       [else (error 'parse "Function is of the wrong type :(")]))
+)
+
+
+#;( CAPTIAN TEACH
+            
+            (test (parse `3) (numC 3))
+(test (parse `xabth) (idC 'xabth))
+(test (parse '{+ 4 5}) (binopC '+ (numC 4) (numC 5)))
+(test (parse '(z 4 5)) (appC (idC 'z) (list (numC 4) (numC 5))))
+(test (parse '(z 4 5 6 7 8 9 (g 10) 11 12 13 14 15 16)) 
+      (appC (idC 'z)
+           (list (numC 4) (numC 5)
+                 (numC 6) (numC 7) (numC 8) (numC 9) (appC (idC 'g) 
+                                                      (list (numC 10)))
+                 (numC 11) (numC 12) (numC 13) (numC 14) 
+                 (numC 15) (numC 16))))
+(test/exn (parse `+) "illegal variable name")
+(test/exn (parse `+) "illegal variable name")
+(test/exn (parse `{+ if with}) "illegal variable name")
+(test/exn (parse '((()))) "illegal expression")
+;; bools
+(test (parse `true) (boolC #t))
+;; fundefs
+(test (parse '{fn {} 3}) (lamC (list) (numC 3)))
+;; NEW FOR 2144:
+(test/exn (parse '{fn {x x} 3}) "unique parameter names")
+;; with
+(test (parse '{with {z = {fn {} 3}} {z}})
+      (appC (lamC (list 'z) (appC (idC 'z) (list)))
+            (list (lamC (list) (numC 3)))))
+;; NEW FOR 2144:
+(test (parse '{with {z = {fn {} 3}} {q = 9} {z}})
+      (appC (lamC (list 'z 'q) (appC (idC 'z) (list)))
+            (list (lamC (list) (numC 3))
+                  (numC 9))))
+(test/exn (parse '{with {z = {fn {} 3}} {z = 9} {z}})
+      "unique parameter")
+;; if
+(test (parse '{if 3 4 5})
+      (ifC (numC 3) (numC 4) (numC 5)))
+
 )
