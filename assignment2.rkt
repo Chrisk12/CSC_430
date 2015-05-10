@@ -309,3 +309,135 @@
 (test/exn (parse-fundef '{fn + {} 13}) "invalid usage of keyword")
 
 )
+
+#;( CLEMENTS TEST CASES
+
+;#lang s-exp handin-server/checker
+
+(require (for-syntax racket))
+
+(define no-more-dialogs? #f)
+
+(define-syntax (!cap stx)
+  (syntax-case stx ()
+    [(_ subform) #`(with-handlers ([exn:fail? handle-err])
+                     subform)]))
+
+(define-syntax (!captest stx)
+  (syntax-case stx ()
+	       [(_ actual expected) #`(with-handlers ([exn:fail? handle-err])
+						     (!test actual expected))]
+	       [(_ actual expected comparer)
+		#`(with-handlers ([exn:fail? handle-err])
+				 (!test actual expected comparer))]))
+
+(define-syntax (!captest/exn stx)
+  (syntax-case stx ()
+	       [(_ actual) #`(with-handlers ([exn:fail? handle-err])
+					    (!test/exn actual))]))
+
+(define-syntax (!capprocedure stx)
+  (syntax-case stx ()
+      [(_ name args) #`(with-handlers ([exn:fail? handle-err])
+			   (!procedure name args))]))
+
+(define (handle-err exn)
+  (let ([msg (exn-message exn)])
+    (add-header-line! (string-append "Testfail: " msg))
+    (unless no-more-dialogs?
+	    (begin
+	      (message (string-append
+			(restrict-to-len msg 200) 
+			"\nSaving submission with errors.")
+		       '(ok))
+	      (set! no-more-dialogs? #t)))))
+
+(define (restrict-to-len str len)
+  (if (> (string-length str) len)
+      (string-append (substring str 0 (- len 3)) "...")
+      str))
+
+
+(check: :language '(module plai-typed)
+        :maxwidth #f
+        :coverage? #t
+        
+        
+        (set! no-more-dialogs? #f)
+        (!all-covered)
+        
+        (!capprocedure eval 2)
+        (!capprocedure parse 1)
+        (!capprocedure parse-fundef 1)
+        (!capprocedure top-eval 2)
+        
+          (!captest (eval (parse '{+ 1 2}) 
+                         (list))
+                 3)
+          (!captest (eval (parse '{* 2 1}) 
+                         (list))
+                 2)
+
+          (!captest (eval (parse '{minus 8 5})
+                         (list
+                          (parse-fundef '{fn minus {x y}
+                                           {+ x {* -1 y}}})))
+                 3)
+          (!captest (eval (parse '{seven})
+                         (list
+                          (parse-fundef '{fn seven {} 
+                                           {minus {+ 3 10} {* 2 3}}})
+                          (parse-fundef '{fn minus {x y}
+                                           {+ x {* -1 y}}})))
+                 7)
+          (!captest (eval (parse '{twice {minus 8 5}})
+                         (list
+                          (parse-fundef '{fn minus {x y}
+                                           {+ x {* -1 y}}})
+                          (parse-fundef '{fn twice {x} {* 2 x}})))
+                 6)
+
+          (!captest (eval (parse '{twice 15})
+                            (list
+                             (parse-fundef '{fn realtwice {x} {+ x x}})
+                             (parse-fundef '{fn twice {x} {realtwice x}})))
+                    30)
+
+          (!captest (eval (parse `{/ {- 13 3} {* 1 5}}) (list))
+                    2)
+          
+          (!captest/exn (parse '{/ 3 4 5}))
+          (!captest/exn (parse '{+ / 3}))
+          (!captest (begin (parse-fundef '{fn f {} 6}) #t) #t)
+          (!captest/exn (parse-fundef '{fn + {} 13}))
+          (!captest/exn (parse-fundef '{fn g {} 13 14}))
+          ;(!captest/exn (parse-fundef '{fn g {z z} 14}))
+
+          
+          (!captest/exn (parse `ifleq0))
+          (!captest (eval (parse '{ifleq0 {* 3 1} 3 {+ 2 9}}) (list))
+                    11)
+          (!captest (eval (parse '{ifleq0 {* 3 0} 3 {+ 2 9}}) (list))
+                    3)
+          (!captest (eval (parse '{ifleq0 {- 0 {* 3 1}} {+ 4 5} {+ 2 9}}) (list))
+                    9)
+          
+          (!captest/exn (parse '{ifleq0 {x 4} 3 {+ 2 9} 3}))
+          
+          (!captest (top-eval '{+ {f 13} {f 0}} (list '{fn f {qq} {ifleq0 qq qq {+ qq 1}}}))
+                    14)
+          
+          (!captest 
+           (top-eval '{even? 378} 
+                     (list `{fn even? {x} {ifleq0 x 1 {odd? {- x 1}}}}
+                           `{fn odd? {x} {ifleq0 x 0 {even? {- x 1}}}}
+                           `{fn leq? {x y} {ifleq0 {- x y} 1 0}}))
+           1)
+          
+          (!captest 
+           (top-eval '{even? 379} 
+                     (list `{fn even? {x} {ifleq0 x 1 {odd? {- x 1}}}}
+                           `{fn odd? {x} {ifleq0 x 0 {even? {- x 1}}}}
+                           `{fn leq? {x y} {ifleq0 {- x y} 1 0}})) 
+           0))
+)
