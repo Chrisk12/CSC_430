@@ -1,0 +1,47 @@
+(define test-binding (list (bind 'p 4) (bind 'x 0)))
+
+(define test-store-array (list
+        (cell 0 (numV 5))
+        (cell 1 (numV 6))
+        (cell 2 (booleanV #t))
+        (cell 3 (numV 8))
+        (cell 4 (arrayV 7 5))
+        (cell 5 (numV 5))
+        (cell 6 (numV 0))
+        (cell 7 (numV 7))
+        (cell 8 (numV 8))
+        (cell 9 (numV 9))
+        (cell 10 (numV 10))
+        (cell 11 (numV 11))))
+        
+(test (eval (parse '{p [4] <- 50}) test-binding test-store-array) 
+      (v*s
+       (numV 50)
+       (list
+        (cell 0 (numV 5))
+        (cell 1 (numV 6))
+        (cell 2 (booleanV #t))
+        (cell 3 (numV 8))
+        (cell 4 (arrayV 7 5))
+        (cell 5 (numV 5))
+        (cell 6 (numV 0))
+        (cell 7 (numV 7))
+        (cell 8 (numV 8))
+        (cell 9 (numV 9))
+        (cell 10 (numV 10))
+        (cell 11 (numV 50)))))
+        
+(test (eval (parse '{{fn {seven} (seven)}
+                     {{fn {minus} {fn {} (minus (+ 3 10) (* 2 3))}}
+                      {fn {x y} (+ {x <- 20} (* -1 y))}}}) empty empty)
+      (v*s
+       (numV 14)
+       (list
+        (cell 0 (closV (list 'x 'y) 
+                       (binop '+ (mutateC 'x (numC 20)) (binop '* (numC -1) (idC 'y))) empty))
+        (cell 1 (closV empty (appC (idC 'minus) 
+                                 (list (binop '+ (numC 3) (numC 10)) 
+                                       (binop '* (numC 2) (numC 3)))) 
+                       (list (bind 'minus 0))))
+        (cell 2 (numV 20))
+        (cell 3 (numV 6)))))
