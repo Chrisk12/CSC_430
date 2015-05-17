@@ -1,0 +1,15 @@
+#lang plai-typed
+; Defines Exprc
+(define-type ExprC
+  [numC (n : number)]
+  [idC (s : symbol)]
+  [booleanC (b : boolean)]
+  [appC (fun : ExprC) (arg : (listof ExprC))]
+  [if (t : ExprC) (iff : ExprC) (ffi : ExprC)]
+  [binop (sym : symbol) (l : ExprC) (r : ExprC)]
+  [newArrayC (size : ExprC) [value : ExprC]]
+  [lamC (arg : (listof symbol)) (body : ExprC)]
+  [refC (sym : ExprC) (location : ExprC)]
+  [setArrayC (sym : ExprC) (location : ExprC) (expression : ExprC)]
+  [mutateC (sym : symbol) (value : ExprC)]
+  [beginC (elist : (listof ExprC))  (sym : ExprC)])

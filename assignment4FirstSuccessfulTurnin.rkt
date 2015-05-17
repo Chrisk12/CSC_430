@@ -1,7 +1,6 @@
 #lang plai-typed
 (require plai-typed/s-exp-match)
 (print-only-errors true)
-
 ; Defines Exprc
 (define-type ExprC
   [numC (n : number)]
@@ -83,13 +82,13 @@
                                               (numV-n (v*s-v arrayIndex))) 
                                            (v*s-s arrayIndex)) 
                                     (v*s-s arrayIndex))]  
-                              [else (error 'refC 
-                                           (string-append (string-append 
-                                                           (string-append 
-                                                            "Not an array or not long enough "       
-                                                            (to-string sym))
-                                                           "   ")
-                                                          (to-string update)))])))]
+                                [else (error 'refC 
+                                             (string-append (string-append 
+                                                             (string-append 
+                                                              "Not an array or not long enough "       
+                                                              (to-string sym))
+                                                             "   ")
+                                                            (to-string update)))])))]
     [setArrayC (s loc exp) 
                (type-case Result (eval s env store)
                  [v*s (v-s s-s)
@@ -97,16 +96,16 @@
                         [v*s (v-loc s-loc)
                              (type-case Result (eval exp env s-loc)
                                [v*s (v-exp s-exp)
-                                    (cond [(and (arrayV? v-s) 
-                                                (> (arrayV-length v-s) 
-                                                   (numV-n v-loc)))
-                                           (v*s v-exp (update-store 
-                                                       (+ (arrayV-location v-s) 
-                                                          (numV-n v-loc)) 
-                                                       v-exp 
-                                                       s-exp))] 
-                                          [else 
-                                           (error 'refC "Not an array or not long enough")])])])])]
+                                      (cond [(and (arrayV? v-s) 
+                                                  (> (arrayV-length v-s) 
+                                                     (numV-n v-loc)))
+                                             (v*s v-exp (update-store 
+                                                         (+ (arrayV-location v-s) 
+                                                            (numV-n v-loc)) 
+                                                         v-exp 
+                                                         s-exp))] 
+                                            [else 
+                                             (error 'refC "Not an array or not long enough")])])])])]
     [mutateC (s expr) (let ([update (type-case Result (eval expr env store)
                                       [v*s (v-expr s-expr)
                                            (v*s v-expr s-expr)])])
@@ -116,25 +115,25 @@
                                            (v*s-s update))))]
     [newArrayC (size value) 
                (type-case Result (eval size env store)
-                 [v*s (v-size s-size)
-                      (type-case Result (eval value env s-size)
-                        [v*s (v-value s-value)
-                             (let [(all (allocate s-value 
-                                                  (numV-n v-size) 
-                                                  v-value))]
-                               (v*s  (arrayV (n*s-base all) (numV-n v-size)) 
-                                     (n*s-store all)))])])]
+                           [v*s (v-size s-size)
+                                (type-case Result (eval value env s-size)
+                                  [v*s (v-value s-value)
+                                       (let [(all (allocate s-value 
+                                                            (numV-n v-size) 
+                                                            v-value))]
+                                          (v*s  (arrayV (n*s-base all) (numV-n v-size)) 
+                                                (n*s-store all)))])])]
     [beginC (l sym)
             (let ([extendStore (evaluate-list l env store)])
               (type-case Result (eval sym env extendStore)
-                [v*s (v-sym s-sym)
-                     (v*s v-sym s-sym)]))]
+            [v*s (v-sym s-sym)
+                 (v*s v-sym s-sym)]))]
     [lamC (param body) (v*s (closV param body env) store)]
     [binop (s l r) (type-case Result (eval l env store) 
-                     [v*s (v-l s-l)
-                          (type-case Result (eval r env s-l)
-                            [v*s (v-r s-r) 
-                                 (v*s ((get-binop s) v-l v-r) s-r)])])]
+                      [v*s (v-l s-l)
+                           (type-case Result (eval r env s-l)
+                             [v*s (v-r s-r) 
+                                  (v*s ((get-binop s) v-l v-r) s-r)])])]
     [if (t iff ffi) (type-case Result (eval t env store)
                       [v*s (v-t s-t)
                            (cond [(not (booleanV? v-t)) 
@@ -158,12 +157,13 @@
                            (env*s-store update))))])]))
 
 ; Evalues a list of experC  
+
 (define (evaluate-list [elist : (listof ExprC)] [env : Env] [store : Store]) : Store
   (cond [(empty? elist) store]
         [else (type-case Result (eval (first elist) env store)
-                [v*s (v-value s-store)
-                     (evaluate-list (rest elist) env s-store)])]))
-
+                        [v*s (v-value s-store)
+                             (evaluate-list (rest elist) env s-store)])]))
+  
 
 ; Updates the store env and binds the symbosl to the env.
 ; The work horse function
@@ -173,22 +173,22 @@
                                    [store : Store]) : ENV*S
   (let 
       ([nextLocation (add1 (get-last-location (cond [(empty? store) 
-                                                     (list (cell -1 (numV -1)))] 
-                                                    [else store])))])
+                                                (list (cell -1 (numV -1)))] 
+                                               [else store])))])
     (cond [(not (equal? (length args) (length values))) 
            (error 'update "not the same length")]
-          [(empty? args) (env*s env store)]
+      [(empty? args) (env*s env store)]
           
-          [else (let 
-                    ([extendStore (allocate store 1 (first values))]
-                     [extendEnv (cons (bind (first args) nextLocation) env)])
-                  (let ([update 
-                         (update-store-bind-symbols (rest args)
-                                                    (rest values)
-                                                    extendEnv
-                                                    (n*s-store extendStore))]) 
-                    
-                    (env*s (env*s-env update) (env*s-store update))))])))
+      [else (let 
+                ([extendStore (allocate store 1 (first values))]
+                 [extendEnv (cons (bind (first args) nextLocation) env)])
+              (let ([update 
+                     (update-store-bind-symbols (rest args)
+                                                (rest values)
+                                                extendEnv
+                                                (n*s-store extendStore))]) 
+                
+                (env*s (env*s-env update) (env*s-store update))))])))
 
 ; 3.11 Defining a parser that takes an s expression and convert it to an ExperC.
 (define (parse [s : s-expression]) : ExprC
@@ -203,8 +203,8 @@
         (error 'parse (string-append (to-string s) "invalid input :("))]
        [else (idC (s-exp->symbol s))])]
     [(s-exp-match? '{new-array ANY ANY} s)
-     (newArrayC (parse (second (s-exp->list s)))
-                (parse (third (s-exp->list s))))]
+                   (newArrayC (parse (second (s-exp->list s)))
+                           (parse (third (s-exp->list s))))]
     [(s-exp-match? '{ref ANY [ANY]} s)
      (refC (parse (second (s-exp->list s))) 
            (parse (first (s-exp->list (third (s-exp->list s))))))]
@@ -218,7 +218,7 @@
     [(s-exp-match? '{begin ANY ...} s)
      (beginC (get-list-of-expr (rest (s-exp->list s))) 
              (parse (first (reverse (s-exp->list s)))))]
-    [(s-exp-match? '{with {SYMBOL = ANY}... ANY} s)
+     [(s-exp-match? '{with {SYMBOL = ANY}... ANY} s)
      (let ([args (list->s-exp (rest (s-exp->list s)))]
            [params (get-params (list->s-exp (rest (s-exp->list s))) empty)]
            [truth (or (not-valid-symbols?
@@ -271,8 +271,8 @@
 
 ; Gets a list of parse exprC
 (define (get-list-of-expr [s : (listof s-expression)]) : (listof ExprC)
-  (cond [(or (empty? s) (= 1 (length s))) empty]
-        [else (cons (parse (first s)) (get-list-of-expr (rest s)))]))
+    (cond [(or (empty? s) (= 1 (length s))) empty]
+          [else (cons (parse (first s)) (get-list-of-expr (rest s)))]))
 
 ; Preforms the look up for the symbol in the envirnment and 
 ; returns the location
@@ -297,6 +297,7 @@
              (cell-val (first sto))]
             [else (fetch loc (rest sto))])]))
 
+
 ; Update Store
 (define (update-store [pointer : number] [new-value : Value] [store : Store]) : Store
   (cond [(or (< pointer 0) (empty? store)) (error 'update-Storage "index out of bounds")]
@@ -307,11 +308,13 @@
 ; Allocates a number of Values onto the store
 (define (allocate [store : Store] [extend-by : number] [value : Value]) : N*S
   (let ([baseLocation (add1 (get-last-location (cond [(empty? store) 
-                                                      (list (cell -1 (numV -1)))] 
-                                                     [else store])))])
-    (n*s baseLocation 
-         (append-list store (create-store extend-by value baseLocation)))))
-
+                                                (list (cell -1 (numV -1)))] 
+                                               [else store])))])
+  (n*s baseLocation (append-list store 
+                                      (create-store extend-by 
+                                                          value 
+                                                          baseLocation)))))
+ 
 ; Get the last location in the store
 (define (get-last-location [store : Store]) : Location
   (cell-location (first (reverse store))))
@@ -392,9 +395,9 @@
     [(and (booleanV? l) (booleanV? r))
      (booleanV (eq? (booleanV-b l) (booleanV-b r)))]
     [(and (arrayV? l) (arrayV? r)) (booleanV (and (equal? (arrayV-location l)
-                                                          (arrayV-location r))
-                                                  (equal? (arrayV-length l)
-                                                          (arrayV-length r))))]
+                                          (arrayV-location r))
+                                          (equal? (arrayV-length l)
+                                          (arrayV-length r))))]
     [else (booleanV false)]))
 
 
@@ -402,12 +405,19 @@
 (define (get-values-eval [exprs : (listof ExprC)]
                          [env : Env]
                          [store : Store]) : LV*S
-  (cond [(empty? exprs) (lv*s empty store)]
-        [else
-         (type-case Result (eval (first exprs) env store)
-           [v*s (v-exp s-exp)
-                (let ([others (get-values-eval (rest exprs) env s-exp)])
+           (cond [(empty? exprs) (lv*s empty store)]
+                 [else
+                    (type-case Result (eval (first exprs) env store)
+                      [v*s (v-exp s-exp)
+                           (let ([others (get-values-eval (rest exprs) env s-exp)])
                   (lv*s (cons v-exp (lv*s-values others)) (lv*s-store others)))])]))
+    
+; Creates a list of binding from teh fdC-Arg and teh argument to the function
+#;(define (get-list-binding [syms : (listof symbol)]
+                          [a : (listof Value)]
+                          [env : Env]) : (listof Binding)
+  (cond [(empty? a) env]
+        [else (cons (bind (first syms) (first a)) (get-list-binding (rest syms) (rest a) env))]))
 
 ; Checks to see if a symbol is a binary operator and returns true if it is
 (define (check-if-binop [s : symbol]) : boolean
@@ -523,7 +533,7 @@
 (define (list-has-no-dups [l : (listof symbol)]) : boolean
   (cond [(empty? l) true]
         [else (check-dupes (first l) (rest l))]))
-
+ 
 ; Takes a symbol and a list and checkes whether that symbol is in the list.
 ; returns true if the symbol is not in the list.
 (define (check-dupes [s : symbol] [l : (listof symbol)]) : boolean
@@ -546,35 +556,34 @@
         [(arrayV? (v*s-v e)) "#<array>"]))
 
 ; Defines a simple while function
-(define while '{fn {a b}  {with {while = 123}
-                                {with {temp = {fn {guard body} 
-                                                  {if {guard} 
-                                                      {begin {body}
-                                                             {while guard body}}
-                                                      returnValue}}}
-                                      {begin {while <- temp}
-                                             {while a b}}}}})
+(define while '{fn {a b} {with {while = 123}
+                               {temp = {fn {guard body fun} 
+                                           {if {guard} 
+                                               {begin {body}
+                                                      {fun guard body fun}}
+                                               true}}}
+                               {begin {while <- temp}
+                                      {while a b while}}}})
 
 ; Defines an inorder function
 (define in-order
   '{fn {a size} {with  {i = 1}
                        {returnValue = true}
-                       {{fn {a b}  {with {while = 123}
-                                         {with {temp = {fn {guard body} 
-                                                           {if {guard} 
-                                                               {begin {body}
-                                                                      {while guard body}}
-                                                               returnValue}}}
-                                               {begin {while <- temp}
-                                                      {while a b}}}}} 
-                        {fn {} {<= i {- size 1}}} 
+                       {{fn {a b} {with {while = 123}
+                                        {temp = {fn {guard body fun} 
+                                                    {if {guard} 
+                                                        {begin {body}
+                                                               {fun guard body fun}}
+                                                        returnValue}}}
+                                        {begin {while <- temp}
+                                               {while a b while}}}} 
+                        {fn {} {<= i {- size 2}}} 
                         {fn {} {if
-                                {<= {ref a [{- i 1}]} {- {ref a [i]} 1}}                   
-                                {i <- {+ i 1}}              
-                                {begin {returnValue <- false}               
-                                       {i <- {+ 1 i}}}}}}}})
+                         {<= {ref a [{- i 1}]} {- {ref a [i]} 1}}                   
+                         {i <- {+ i 1}}              
+                         {begin {returnValue <- false}               
+                                {i <- {+ 1 size}}}}}}}})
 
-;===============TEST CASES=======================
 ; Used for testing, defines store 
 (define test-store (list (cell 0 (numV 5)) 
                          (cell 1 (numV 6)) 
@@ -583,30 +592,31 @@
 
 ;Used for testing, defines store 
 (define test-store-2 (list (cell 0 (numV 5)) 
-                           (cell 1 (numV 6)) 
-                           (cell 2 (booleanV true))
-                           (cell 3 (numV 8))
-                           (cell 4 (numV 5))
-                           (cell 5 (numV 5))
-                           (cell 6 (numV 0))))
+                         (cell 1 (numV 6)) 
+                         (cell 2 (booleanV true))
+                         (cell 3 (numV 8))
+                         (cell 4 (numV 5))
+                         (cell 5 (numV 5))
+                         (cell 6 (numV 0))))
 
 ;Used for testing, defines store 
 (define test-store-array (list
-                          (cell 0 (numV 5))
-                          (cell 1 (numV 6))
-                          (cell 2 (booleanV #t))
-                          (cell 3 (numV 8))
-                          (cell 4 (arrayV 7 5))
-                          (cell 5 (numV 5))
-                          (cell 6 (numV 0))
-                          (cell 7 (numV 7))
-                          (cell 8 (numV 8))
-                          (cell 9 (numV 9))
-                          (cell 10 (numV 10))
-                          (cell 11 (numV 11))))
+        (cell 0 (numV 5))
+        (cell 1 (numV 6))
+        (cell 2 (booleanV #t))
+        (cell 3 (numV 8))
+        (cell 4 (arrayV 7 5))
+        (cell 5 (numV 5))
+        (cell 6 (numV 0))
+        (cell 7 (numV 7))
+        (cell 8 (numV 8))
+        (cell 9 (numV 9))
+        (cell 10 (numV 10))
+        (cell 11 (numV 11))))
 
 ;Used for testing, defines binding
 (define test-binding (list (bind 'p 4) (bind 'x 0)))
+;===============TEST CASES=======================
 
 (test (parse '{+ 5 2}) (binop '+ (numC 5) (numC 2)))
 (test (parse '{- 5 2}) (binop '- (numC 5) (numC 2)))
@@ -621,11 +631,134 @@
 (test (eval (parse '{/ 5 2}) empty empty) (v*s (numV 5/2) empty))
 (test (eval (parse '{eq? 5 2}) empty empty) (v*s (booleanV false) empty))
 (test (eval (parse '{<= 5 2}) empty empty) (v*s (booleanV false) empty))
+(test (eval (parse '{new-array 2 5}) empty empty) 
+      (v*s (arrayV 0 2) (list (cell 0 (numV 5)) (cell 1 (numV 5)))))
+
+(test (parse '{new-array 5 10}) (newArrayC (numC 5) (numC 10)))
+
+(test (allocate test-store 2 (numV 5)) (n*s 4 (list (cell 0 (numV 5)) 
+                                                    (cell 1 (numV 6)) 
+                                                    (cell 2 (booleanV true)) 
+                                                    (cell 3 (numV 8))
+                                                     (cell 4 (numV 5))
+                                                      (cell 5 (numV 5)))))
+
+(test (update-store 2 (numV 100) test-store) 
+      (list (cell 0 (numV 5)) 
+            (cell 1 (numV 6)) 
+            (cell 2 (numV 100)) 
+            (cell 3 (numV 8))))
+
+(test (fetch 3 test-store) (numV 8)) 
+(test (get-last-location test-store) 3)
+(test (eval (parse '{new-array 2 8}) empty 
+            (list (cell 0 (numV 5)) 
+                  (cell 1 (numV 5)))) 
+      (v*s (arrayV 2 2) 
+           (list (cell 0 (numV 5)) 
+                 (cell 1 (numV 5)) 
+                 (cell 2 (numV 8)) 
+                 (cell 3 (numV 8)))))
+
+(test (eval (parse '{p <- {new-array 5 10}}) test-binding test-store-2) 
+      (v*s
+       (arrayV 7 5)
+       (list
+        (cell 0 (numV 5))
+        (cell 1 (numV 6))
+        (cell 2 (booleanV #t))
+        (cell 3 (numV 8))
+        (cell 4 (arrayV 7 5))
+        (cell 5 (numV 5))
+        (cell 6 (numV 0))
+        (cell 7 (numV 10))
+        (cell 8 (numV 10))
+        (cell 9 (numV 10))
+        (cell 10 (numV 10))
+        (cell 11 (numV 10)))))
+
+(test/exn (eval (parse '{ref p [15]}) test-binding test-store-array) "Not")
+(test (eval (parse '{ref p [4]}) test-binding test-store-array) 
+      (v*s
+       (numV 11)
+       (list
+        (cell 0 (numV 5))
+        (cell 1 (numV 6))
+        (cell 2 (booleanV #t))
+        (cell 3 (numV 8))
+        (cell 4 (arrayV 7 5))
+        (cell 5 (numV 5))
+        (cell 6 (numV 0))
+        (cell 7 (numV 7))
+        (cell 8 (numV 8))
+        (cell 9 (numV 9))
+        (cell 10 (numV 10))
+        (cell 11 (numV 11)))))
+(test/exn (eval (parse '{p [15] <- 50}) test-binding test-store-array) "Not")
+(test (eval (parse '{p [4] <- 50}) test-binding test-store-array) 
+      (v*s
+       (numV 50)
+       (list
+        (cell 0 (numV 5))
+        (cell 1 (numV 6))
+        (cell 2 (booleanV #t))
+        (cell 3 (numV 8))
+        (cell 4 (arrayV 7 5))
+        (cell 5 (numV 5))
+        (cell 6 (numV 0))
+        (cell 7 (numV 7))
+        (cell 8 (numV 8))
+        (cell 9 (numV 9))
+        (cell 10 (numV 10))
+        (cell 11 (numV 50)))))
+
+(define list-exprs (list (numC 1) (numC 2) (numC 3) (newArrayC (numC 2) (numC 8))))
+(define get-values-eval-store (list (cell 3 (numV 5))))
+(test (get-values-eval list-exprs empty get-values-eval-store) 
+      (lv*s (list (numV 1) 
+                  (numV 2) 
+                  (numV 3) 
+                  (arrayV 4 2)) 
+            (list (cell 3 (numV 5))
+                  (cell 4 (numV 8)) 
+                  (cell 5 (numV 8)))))
+
+(test (update-store-bind-symbols (list 'a 'b) 
+                                 (list (numV 1) (numV 2)) 
+                                 empty 
+                                 empty) 
+      (env*s (list (bind 'b 1) 
+                   (bind 'a 0)) 
+             (list (cell 0 (numV 1)) 
+                   (cell 1 (numV 2)))))
+
+(test (update-store-bind-symbols (list 'a 'b) 
+                                 (list (numV 1) 
+                                       (numV 2)) 
+                                 empty 
+                                 (list (cell 2 (numV 5))))
+      (env*s (list (bind 'b 4) 
+                   (bind 'a 3)) 
+             (list (cell 2 (numV 5)) 
+                   (cell 3 (numV 1)) 
+                   (cell 4 (numV 2)))))
 
 (test (serialize (v*s (booleanV true) empty)) "true")
 (test (serialize (v*s (booleanV false) empty)) "false")
 (test (parse '{true}) (booleanC true))
 (test (parse '{false}) (booleanC false))
+(test (eval (parse '{{fn {seven} (seven)}
+                     {{fn {minus} {fn {} (minus (+ 3 10) (* 2 3))}}
+                      {fn {x y} (+ x (* -1 y))}}}) empty empty) 
+      (v*s
+       (numV 7)
+       (list
+        (cell 0 (closV (list 'x 'y) (binop '+ (idC 'x) (binop '* (numC -1) (idC 'y))) empty))
+        (cell 1 (closV empty (appC (idC 'minus) (list (binop '+ (numC 3) (numC 10)) 
+                                                    (binop '* (numC 2) (numC 3)))) 
+                       (list (bind 'minus 0))))
+        (cell 2 (numV 13))
+        (cell 3 (numV 6)))))
 (test (eval (parse '{eq? true false}) empty empty) (v*s (booleanV false) empty))
 (test (eval (parse '{eq? true true}) empty empty) (v*s (booleanV true) empty))
 (test (eval (parse '{eq? true 3}) empty empty) (v*s (booleanV false) empty))
@@ -667,6 +800,8 @@
 (test (parse '{if true 3 5}) (if (booleanC #t) (numC 3) (numC 5)))
 (test (eval (parse '{if true 3 5}) empty empty) (v*s (numV 3) empty))
 (test (eval (parse '{if false 3 5}) empty empty) (v*s (numV 5) empty))
+(test (serialize (v*s (numV 3) empty)) "3")
+(test (serialize (v*s (booleanV true) empty)) "true")
 (test (parse '{with {z = {+ 9 14}} {y = 98} {+ z y}})
       (appC (lamC (list 'z 'y) (binop '+ (idC 'z) (idC 'y)))
             (list (binop '+ (numC 9) (numC 14)) (numC 98))))
@@ -758,6 +893,7 @@
 (test (check-if-reserved-symbol-excluding-true-false '=) true)
 (test (check-if-reserved-symbol-excluding-true-false 'new-array) true)
 
+(test (serialize (v*s (closV empty (numC 3) empty) empty)) "#<procedure>")
 (test/exn (parse '{with {z = {fn {} 3}} {z = 9} {z}}) "dups")
 (test (top-eval '{(fn (minus) (minus 8 5)) (fn (a b) (+ a (* -1 b)))}) "3")
 (test (top-eval '{{fn {multi-larg} {multi-larg 1 5 4 2}} 
@@ -768,139 +904,7 @@
                                         {+ a d} 
                                         {+ a c}}}}}) "9")
 
-; Assign 4 Test cases
-(test (serialize (v*s (numV 3) empty)) "3")
-(test (serialize (v*s (booleanV true) empty)) "true")
-(test (serialize (v*s (closV empty (numC 3) empty) empty)) "#<procedure>")
 (test (top-eval '{new-array 5 3}) "#<array>") 
-
-(test/exn (eval (parse '{ref p [15]}) test-binding test-store-array) "Not")
-
-(test (eval (parse '{new-array 2 5}) empty empty) 
-      (v*s (arrayV 0 2) (list (cell 0 (numV 5)) (cell 1 (numV 5)))))
-
-(test (parse '{new-array 5 10}) (newArrayC (numC 5) (numC 10)))
-
-(test (allocate test-store 2 (numV 5)) (n*s 4 (list (cell 0 (numV 5)) 
-                                                    (cell 1 (numV 6)) 
-                                                    (cell 2 (booleanV true)) 
-                                                    (cell 3 (numV 8))
-                                                    (cell 4 (numV 5))
-                                                    (cell 5 (numV 5)))))
-
-(test (update-store 2 (numV 100) test-store) 
-      (list (cell 0 (numV 5)) 
-            (cell 1 (numV 6)) 
-            (cell 2 (numV 100)) 
-            (cell 3 (numV 8))))
-
-(test (fetch 3 test-store) (numV 8)) 
-(test (get-last-location test-store) 3)
-(test (eval (parse '{new-array 2 8}) empty 
-            (list (cell 0 (numV 5)) 
-                  (cell 1 (numV 5)))) 
-      (v*s (arrayV 2 2) 
-           (list (cell 0 (numV 5)) 
-                 (cell 1 (numV 5)) 
-                 (cell 2 (numV 8)) 
-                 (cell 3 (numV 8)))))
-
-(test (eval (parse '{p <- {new-array 5 10}}) test-binding test-store-2) 
-      (v*s
-       (arrayV 7 5)
-       (list
-        (cell 0 (numV 5))
-        (cell 1 (numV 6))
-        (cell 2 (booleanV #t))
-        (cell 3 (numV 8))
-        (cell 4 (arrayV 7 5))
-        (cell 5 (numV 5))
-        (cell 6 (numV 0))
-        (cell 7 (numV 10))
-        (cell 8 (numV 10))
-        (cell 9 (numV 10))
-        (cell 10 (numV 10))
-        (cell 11 (numV 10)))))
-
-(define list-exprs (list (numC 1) (numC 2) (numC 3) (newArrayC (numC 2) (numC 8))))
-(define get-values-eval-store (list (cell 3 (numV 5))))
-(test (get-values-eval list-exprs empty get-values-eval-store) 
-      (lv*s (list (numV 1) 
-                  (numV 2) 
-                  (numV 3) 
-                  (arrayV 4 2)) 
-            (list (cell 3 (numV 5))
-                  (cell 4 (numV 8)) 
-                  (cell 5 (numV 8)))))
-
-(test (update-store-bind-symbols (list 'a 'b) 
-                                 (list (numV 1) (numV 2)) 
-                                 empty 
-                                 empty) 
-      (env*s (list (bind 'b 1) 
-                   (bind 'a 0)) 
-             (list (cell 0 (numV 1)) 
-                   (cell 1 (numV 2)))))
-
-(test (update-store-bind-symbols (list 'a 'b) 
-                                 (list (numV 1) 
-                                       (numV 2)) 
-                                 empty 
-                                 (list (cell 2 (numV 5))))
-      (env*s (list (bind 'b 4) 
-                   (bind 'a 3)) 
-             (list (cell 2 (numV 5)) 
-                   (cell 3 (numV 1)) 
-                   (cell 4 (numV 2)))))
-
-(test (eval (parse '{ref p [4]}) test-binding test-store-array) 
-      (v*s
-       (numV 11)
-       (list
-        (cell 0 (numV 5))
-        (cell 1 (numV 6))
-        (cell 2 (booleanV #t))
-        (cell 3 (numV 8))
-        (cell 4 (arrayV 7 5))
-        (cell 5 (numV 5))
-        (cell 6 (numV 0))
-        (cell 7 (numV 7))
-        (cell 8 (numV 8))
-        (cell 9 (numV 9))
-        (cell 10 (numV 10))
-        (cell 11 (numV 11)))))
-
-(test/exn (eval (parse '{p [15] <- 50}) test-binding test-store-array) "Not")
-
-(test (eval (parse '{p [4] <- 50}) test-binding test-store-array) 
-      (v*s
-       (numV 50)
-       (list
-        (cell 0 (numV 5))
-        (cell 1 (numV 6))
-        (cell 2 (booleanV #t))
-        (cell 3 (numV 8))
-        (cell 4 (arrayV 7 5))
-        (cell 5 (numV 5))
-        (cell 6 (numV 0))
-        (cell 7 (numV 7))
-        (cell 8 (numV 8))
-        (cell 9 (numV 9))
-        (cell 10 (numV 10))
-        (cell 11 (numV 50)))))
-
-(test (eval (parse '{{fn {seven} (seven)}
-                     {{fn {minus} {fn {} (minus (+ 3 10) (* 2 3))}}
-                      {fn {x y} (+ x (* -1 y))}}}) empty empty) 
-      (v*s
-       (numV 7)
-       (list
-        (cell 0 (closV (list 'x 'y) (binop '+ (idC 'x) (binop '* (numC -1) (idC 'y))) empty))
-        (cell 1 (closV empty (appC (idC 'minus) (list (binop '+ (numC 3) (numC 10)) 
-                                                      (binop '* (numC 2) (numC 3)))) 
-                       (list (bind 'minus 0))))
-        (cell 2 (numV 13))
-        (cell 3 (numV 6)))))
 
 (test (eval (parse '{+ x y}) 
             (list (bind 'x 1) (bind 'y 0)) 
@@ -908,15 +912,15 @@
       (v*s (numV 17) (list (cell 0 (numV 10)) (cell 1 (numV 7)))))
 
 (test (top-eval '{{fn {seven} (seven)}
-                  {{fn {minus} {fn {} (minus (+ 3 10) (* 2 3))}}
-                   {fn {x y} (+ x (* -1 y))}}}) "7") 
+                     {{fn {minus} {fn {} (minus (+ 3 10) (* 2 3))}}
+                      {fn {x y} (+ x (* -1 y))}}}) "7") 
 
 (test (eval (parse '{begin {+ 3 5} {* 9 8} {/ 5 8} p}) 
             (list (bind 'p 8)) 
             (list (cell 8 (numV 5))))
       (v*s (numV 5) 
            (list (cell 8 (numV 5)))))
-
+      
 (test (eval (parse '{begin {new-array 2 5} {* 9 8} {/ 5 8} p}) 
             (list (bind 'p 8)) (list (cell 8 (numV 5))))
       (v*s (numV 5) (list (cell 8 (numV 5)) 
@@ -924,18 +928,18 @@
                           (cell 10 (numV 5)))))
 
 (test (eval (parse '{eq? p p}) (list (bind 'p 4) (bind 'x 0)) (list
-                                                               (cell 0 (numV 5))
-                                                               (cell 1 (numV 6))
-                                                               (cell 2 (booleanV #t))
-                                                               (cell 3 (numV 8))
-                                                               (cell 4 (arrayV 7 5))
-                                                               (cell 5 (numV 5))
-                                                               (cell 6 (numV 0))
-                                                               (cell 7 (numV 7))
-                                                               (cell 8 (numV 8))
-                                                               (cell 9 (numV 9))
-                                                               (cell 10 (numV 10))
-                                                               (cell 11 (numV 11)))) 
+        (cell 0 (numV 5))
+        (cell 1 (numV 6))
+        (cell 2 (booleanV #t))
+        (cell 3 (numV 8))
+        (cell 4 (arrayV 7 5))
+        (cell 5 (numV 5))
+        (cell 6 (numV 0))
+        (cell 7 (numV 7))
+        (cell 8 (numV 8))
+        (cell 9 (numV 9))
+        (cell 10 (numV 10))
+        (cell 11 (numV 11)))) 
       
       (v*s
        (booleanV #t)
@@ -962,12 +966,12 @@
         (cell 0 (closV (list 'x 'y) 
                        (binop '+ (mutateC 'x (numC 20)) (binop '* (numC -1) (idC 'y))) empty))
         (cell 1 (closV empty (appC (idC 'minus) 
-                                   (list (binop '+ (numC 3) (numC 10)) 
-                                         (binop '* (numC 2) (numC 3)))) 
+                                 (list (binop '+ (numC 3) (numC 10)) 
+                                       (binop '* (numC 2) (numC 3)))) 
                        (list (bind 'minus 0))))
         (cell 2 (numV 20))
         (cell 3 (numV 6)))))
-
+      
 (test (eval (parse '{{new-array 50 5} [15] <- -100}) 
             (list (bind 'p 4) (bind 'x 0)) 
             (list
@@ -1048,126 +1052,80 @@
                                      (cell 60 (numV 5))
                                      (cell 61 (numV 5)))))
 ; In order test case
-(test (top-eval '{{fn {a size} {with  {i = 1}
-                                      {returnValue = true}
-                                      {{fn {a b}  {with {while = 123}
-                                                        {with 
-                                                         {temp = {fn {guard body} 
-                                                                     {if {guard} 
-                                                                         {begin {body}
-                                                                                {while guard body}}
-                                                                         returnValue}}}
-                                                         {begin {while <- temp}
-                                                                {while a b}}}}} 
-                                       {fn {} {<= i {- size 1}}} 
-                                       {fn {} {if
-                                               {<= {ref a [{- i 1}]} {- {ref a [i]} 1}}                   
-                                               {i <- {+ i 1}}              
-                                               {begin {returnValue <- false}               
-                                                      {i <- {+ 1 size}}}}}}}} 
-                  {with {a = {new-array 5 0}}
-                        {begin {a[0] <- 1}
-                               {a[1] <- 12}
-                               {a[2] <- 13}
-                               {a[3] <- 14}
-                               {a[4] <- 15}
-                               a}} 5}) "true")
 
 
-(test (top-eval '{{fn {a size} {with  {i = 1}
-                                      {returnValue = true}
-                                      {{fn {a b}  
-                                           {with {while = 123}
-                                                 {with 
-                                                  {temp = {fn {guard body} 
-                                                              {if {guard} 
-                                                                  {begin {body}
-                                                                         {while guard body}}
-                                                                  returnValue}}}
-                                                  {begin {while <- temp}
-                                                         {while a b}}}}} 
-                                       {fn {} {<= i {- size 1}}} 
-                                       {fn {} {if
-                                               {<= {ref a [{- i 1}]} {- {ref a [i]} 1}}                   
-                                               {i <- {+ i 1}}              
-                                               {begin {returnValue <- false}               
-                                                      {i <- {+ 1 i}}}}}}}} {with {a = {new-array 5 0}}
-                                                                                 {begin {a[0] <- 1}
-                                                                                        {a[1] <- 1}
-                                                                                        {a[2] <- 13}
-                                                                                        {a[3] <- 14}
-                                                                                        {a[4] <- 15}
-                                                                                        a}} 5}) "false")
+(test (top-eval '{{fn {a size} {with {in-order = 123}
+                         {temp = {fn {a size cur last fun}
+                             {if {eq? size cur} true        
+                                 {if {<= {ref a[last]} {- {ref a[cur]} 1}}
+                                     {fun a size {+ 1 cur} {+ 1 last} fun}
+                                     false}}}}
+                         {begin {in-order <- temp}
+                         {in-order a size 1 0 in-order}}}} {with {a = {new-array 5 0}}
+                                                                 {begin {a[0] <- 1}
+                                                                        {a[1] <- 12}
+                                                                        {a[2] <- 13}
+                                                                        {a[3] <- 14}
+                                                                        {a[4] <- 15}
+                                                                        a}} 5}) "true")
+
+
+(test (top-eval '{{fn {a size} {with {in-order = 123}
+                         {temp = {fn {a size cur last fun}
+                             {if {eq? size cur} true        
+                                 {if {<= {ref a[last]} {- {ref a[cur]} 1}}
+                                     {fun a size {+ 1 cur} {+ 1 last} fun}
+                                     false}}}}
+                         {begin {in-order <- temp}
+                         {in-order a size 1 0 in-order}}}} {with {a = {new-array 5 0}}
+                                                                 {begin {a[0] <- 1}
+                                                                        {a[1] <- 1}
+                                                                        {a[2] <- 13}
+                                                                        {a[3] <- 14}
+                                                                        {a[4] <- 15}
+                                                                        a}} 5}) "false")
 
 (test (top-eval '{{fn {a size} {with  {i = 1}
-                                      {returnValue = true}
-                                      {{fn {a b}  
-                                           {with {while = 123}
-                                                 {with 
-                                                  {temp = {fn {guard body} 
-                                                              {if {guard} 
-                                                                  {begin {body}
-                                                                         {while guard body}}
-                                                                  returnValue}}}
-                                                  {begin {while <- temp}
-                                                         {while a b}}}}} 
-                                       {fn {} {<= i {- size 1}}} 
-                                       {fn {} {if
-                                               {<= {ref a [{- i 1}]} {- {ref a [i]} 1}}                   
-                                               {i <- {+ i 1}}              
-                                               {begin {returnValue <- false}               
-                                                      {i <- {+ 1 i}}}}}}}} 
-                  {with {a = {new-array 3 0}}
-                        {begin {a[0] <- 1}
-                               {a[1] <- 12}
-                               {a[2] <- 13}
-                               a}} 3}) "true")
-
-(test (top-eval '{{fn {a size} 
-                      {with  {i = 1}
-                             {returnValue = true}
-                             {{fn {a b}  
-                                  {with {while = 123}
-                                        {with 
-                                         {temp = {fn {guard body} 
-                                                     {if {guard} 
-                                                         {begin {body}
-                                                                {while guard body}}
-                                                         returnValue}}}
-                                         {begin {while <- temp}
-                                                {while a b}}}}} 
-                              {fn {} {<= i {- size 1}}} 
-                              {fn {} {if
-                                      {<= {ref a [{- i 1}]} {- {ref a [i]} 1}}                   
-                                      {i <- {+ i 1}}              
-                                      {begin {returnValue <- false}               
-                                             {i <- {+ 1 i}}}}}}}} 
-                  {with {a = {new-array 3 0}}
-                        {begin {a[0] <- 1}
-                               {a[1] <- 13}
-                               {a[2] <- 13}
-                               a}} 3}) "false")
+                       {returnValue = true}
+                       {{fn {a b} {with {while = 123}
+                                        {temp = {fn {guard body fun} 
+                                                    {if {guard} 
+                                                        {begin {body}
+                                                               {fun guard body fun}}
+                                                        returnValue}}}
+                                        {begin {while <- temp}
+                                               {while a b while}}}} 
+                        {fn {} {<= i {- size 2}}} 
+                        {fn {} {if
+                         {<= {ref a [{- i 1}]} {- {ref a [i]} 1}}                   
+                         {i <- {+ i 1}}              
+                         {begin {returnValue <- false}               
+                                {i <- {+ 1 size}}}}}}}} {with {a = {new-array 3 0}}
+                                                                            {begin {a[0] <- 1}
+                                                                                   {a[1] <- 12}
+                                                                                   {a[2] <- 13}
+                                                                                   a}} 3}) "true")
 
 (test (top-eval '{{fn {a size} {with  {i = 1}
-                                      {returnValue = true}
-                                      {{fn {a b} {with {while = 123}
-                                                       {temp = {fn {guard body fun} 
-                                                                   {if {guard} 
-                                                                       {begin {body}
-                                                                              {fun guard body fun}}
-                                                                       returnValue}}}
-                                                       {begin {while <- temp}
-                                                              {while a b while}}}} 
-                                       {fn {} {<= i {- size 2}}} 
-                                       {fn {} {if
-                                               {<= {ref a [{- i 1}]} {- {ref a [i]} 1}}                   
-                                               {i <- {+ i 1}}              
-                                               {begin {returnValue <- false}               
-                                                      {i <- {+ 1 size}}}}}}}} {with {a = {new-array 3 0}}
-                                                                                    {begin {a[0] <- 1}
-                                                                                           {a[1] <- 0}
-                                                                                           {a[2] <- 13}
-                                                                                           a}} 3}) "false")
+                       {returnValue = true}
+                       {{fn {a b} {with {while = 123}
+                                        {temp = {fn {guard body fun} 
+                                                    {if {guard} 
+                                                        {begin {body}
+                                                               {fun guard body fun}}
+                                                        returnValue}}}
+                                        {begin {while <- temp}
+                                               {while a b while}}}} 
+                        {fn {} {<= i {- size 2}}} 
+                        {fn {} {if
+                         {<= {ref a [{- i 1}]} {- {ref a [i]} 1}}                   
+                         {i <- {+ i 1}}              
+                         {begin {returnValue <- false}               
+                                {i <- {+ 1 size}}}}}}}} {with {a = {new-array 3 0}}
+                                                                            {begin {a[0] <- 1}
+                                                                                   {a[1] <- 0}
+                                                                                   {a[2] <- 13}
+                                                                                   a}} 3}) "false")
 ;; Captain Teach Test Cases
 (test (parse `3) (numC 3))
 (test (parse `xabth) (idC 'xabth))
@@ -1180,7 +1138,7 @@
                                                             (list (numC 10)))
                   (numC 11) (numC 12) (numC 13) (numC 14)
                   (numC 15) (numC 16))))
-
+ 
 
 ;; fundefs
 (test (parse '{fn {} 3}) (lamC (list) (numC 3)))
