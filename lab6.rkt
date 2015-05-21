@@ -39,8 +39,8 @@
     [idC (n) (lookup n env)]
     [appC (f a) (local ([define f-value (eval f env)])
                   (eval (closV-body f-value)
-                        (let ([newEnv (get-list-binding (closV-arg f-value) 
-                                          (get-values-eval a env) 
+                        (let ([newEnv (get-list-binding (closV-arg f-value)
+                                          (get-values-eval a env)
                                           (closV-env f-value))]) newEnv)))]
     [lamC (param body) (closV param body env)]
     [binop (s l r) ((get-binop s) (eval l env) (eval r env))]
@@ -186,148 +186,97 @@
 (define sym-list (list 'a 'b 'c 'd 'e 'f 'g 'h))
 
 ; defines a list of expression
-(define exp-list (list `{binop +}
-                       `{binop /}
-                       `{binop *}
-                       `{binop -}
-                       `{lamC}
-                       `{if}
-                       `{appC}))
+(define exp-list (list 'binop
+                       'lamC
+                       'if
+                       'appC))
 
 ; defines a list of expression
-(define exp-base-list (list `{numC}
-                       `{booleanC}
-                       `{idC}
-                       `{true}
-                       `{false}))
+(define base-list (list 'numC
+                       'booleanC
+                       'idC
+                       'true
+                       'false))
 
 
 (define (randomSymbol [s : (listof symbol)]) : symbol
-  (get-single-element s (modulo (random (length s)) (length s))))
+  (get-single-element s (random (length s))))
 
-; helper function that returns the randon symbol to randomSymbol
-(define (get-single-element [s : (listof 'a)] [n : number]) : 'a
-  (cond [(eq? n 0) (first s)]
+(define (get-single-element [s : (listof symbol)] [n : number]) : symbol
+  (cond [(eq? 0 n) (first s)]
         [else (get-single-element (rest s) (sub1 n))]))
 
-; helper function that returns the randon symbol to randomSymbol
-(define (get-element [s : (listof 'a)] 
-                     [n : number]
-                     [maxDepth : number]
-                     [syms : (listof symbol)]) : 'a
-  (cond [(eq? n 0) (create-s-expr (s-exp->list (first s)) maxDepth syms)]
-        [else (get-element (rest s) (sub1 n) maxDepth syms)]))
-
-; Joins pieces into an s expression
-(define (create-s-expr [s : (listof s-expression)] 
-                       [maxDepth : number]
-                       [syms : (listof symbol)]) : ExprC
-  (let ([chooser (random 3)])
-    (cond
-      [(and (<= 2 chooser)(and (not (eq? 0 maxDepth)) (s-exp-match? `if (first s))))
-       (if (booleanC true) 
-           (get-element exp-list (modulo (random (length exp-list)) 
-                                         (length exp-list))
-                        (sub1 maxDepth) syms)
-           (get-element exp-list (modulo (random (length exp-list)) 
-                                         (length exp-list))
-                        (sub1 maxDepth) syms))]
-      [(and (not (eq? 0 maxDepth)) (s-exp-match? `if (first s)))
-       (if (booleanC false) 
-               (get-element exp-list (modulo (random (length exp-list)) 
-                                             (length exp-list))
-                            (sub1 maxDepth) syms)
-               (get-element exp-list (modulo (random (length exp-list)) 
-                                             (length exp-list))
-                            (sub1 maxDepth)syms))]
-          [(and (not (eq? 0 maxDepth)) (s-exp-match? `binop (first s)))
-           (binop (s-exp->symbol (second s)) 
-                  (get-element exp-list (modulo (random (length exp-list)) 
-                                                (length exp-list)) 
-                               (sub1 maxDepth) syms)
-                  (get-element exp-list (modulo (random (length exp-list)) 
-                                                (length exp-list)) 
-                               (sub1 maxDepth) syms))]
-          [(and (not (eq? 0 maxDepth)) (s-exp-match? `appC (first s)))
-           (appC  (get-element exp-list (modulo (random (length exp-list)) 
-                                                (length exp-list)) 
-                               (sub1 maxDepth) syms) 
-           (random-symbols syms))]
-          [(and (not (eq? 0 maxDepth)) (s-exp-match? `(lamC) (first s)))
-           (lamC (random-symbols-lam syms)  (get-element exp-list 
-                                                       (modulo 
-                                                        (random 
-                                                         (length exp-list)) 
-                                                        (length exp-list)) 
-                                                       (sub1 maxDepth) syms))]
-          [(or (eq? chooser 0)  (s-exp-match? `numC (first s)))
-           (numC chooser)]
-          [(or (eq? chooser 1)  (s-exp-match? `booleanC (first s)))
-               (booleanC true)]
-          [(or (eq? chooser 2)  (s-exp-match? `idC (first s)))
-           (idC (randomSymbol syms))]
-          [(or (eq? chooser 2) (s-exp-match? `true (first s)))
-           (booleanC true)]
-          [(or (eq? chooser 1) (s-exp-match? `false (first s)))
-           (booleanC false)]
-          [(or (eq? chooser 2)  (s-exp-match? `true (first s)))
-           (booleanC true)]
-          [(or (eq? chooser 1) (s-exp-match? `false (first s)))
-           (booleanC false)]
-          [(or (eq? chooser 2) (or (eq? 0 maxDepth) (s-exp-match? `true (first s))))
-           (booleanC true)]
-          [(or (eq? chooser 0) (or (eq? 0 maxDepth) (s-exp-match? `true (first s))))
-           (booleanC false)])))
-
-; gets a random symbols and turns them into sexpressions for appC
-(define (random-symbols [syms : (listof symbol)]) : (listof ExprC)
-  (let ([randomNumber (+ 1 (random 3))])
-    (cond [(eq? randomNumber 1) (list (idC (randomSymbol syms)))]
-          [(eq? randomNumber 2) (list (idC (randomSymbol syms))
-                                      (idC  (randomSymbol syms)))]
-          [(eq? randomNumber 3) (list (idC (randomSymbol syms))
-                                      (idC  (randomSymbol syms))
-                                      (idC  (randomSymbol syms)))])))
-
-; gets a random symbols and turns them into sexpressions for appC
-(define (random-symbols-lam [syms : (listof symbol)]) : (listof symbol)
-  (let ([randomNumber (+ 1 (random 3))])
-    (cond [(eq? randomNumber 1) (list (randomSymbol syms))]
-          [(eq? randomNumber 2) (list (randomSymbol syms)
-                                        (randomSymbol syms))]
-          [(eq? randomNumber 3) (list  (randomSymbol syms)
-                                        (randomSymbol syms)
-                                        (randomSymbol syms))])))
-
-
-; takes in a list of symbols and returns a random expression
-(define (randomClosedTerm [s : (listof s-expression)] 
-                          [syms : (listof symbol)]) : ExprC
-  
-  (get-element s (modulo (random (length s)) (length s)) 0 syms))
-
-
-; takes in a list of symbols and returns a random expression
-(define (randomTerm [s : (listof s-expression)] [maxDepth : number]) : ExprC
-  (get-element s (modulo (random (length s)) (length s)) maxDepth sym-list))
-
-
-; Defines run trials with sees how many trials work and dont work.
-#;(define (runTrials [numTrials : number] [maxDepth : number]) : Value
-  (cond [(eq? 0 maxDepth) (eval (randomTerm exp-list maxDepth) empty)]
-        [try (eval (randomTerm exp-list) empty) (lambda ())]))
-
-
 
 (randomSymbol sym-list)
 (randomSymbol sym-list)
 (randomSymbol sym-list)
 (randomSymbol sym-list)
 
-(randomClosedTerm exp-base-list (list 'a 'b 'f 'e))
-(randomClosedTerm exp-base-list (list 'a 'b 'f 'e))
-(randomClosedTerm exp-base-list (list 'a 'b 'f 'e))
 
-(randomTerm exp-list (random 3))
-(randomTerm exp-list (random 3))
-(randomTerm exp-list (random 3))
+(define (randomClosedTerm [ss : (listof symbol)]
+                          [bound : (listof symbol)]) : ExprC
+  (let ([s (get-single-element ss (random (length ss)))]
+        [rands (random 1)])
+  (cond [(eq? s 'numC) (numC (random 100))]
+        [(eq? s 'booleanC) (cond [(eq? rands 0) (booleanC true)]
+                                 [else (booleanC false)])]
+        [(and (not (empty? bound)) (eq? s 'idC)) (idC (randomSymbol bound))]
+        [(eq? s 'true) (booleanC true)]
+        [else (booleanC false)])))
+
+(randomClosedTerm base-list empty)
+(randomClosedTerm base-list empty)
+(randomClosedTerm base-list empty)
+(randomClosedTerm base-list empty)
+ 
+
+(define (randomTerm [maxDepth : number]) : ExprC
+  (cond [(eq? 0 maxDepth) (randomClosedTerm base-list empty)]
+        [else (let ([rand (random (length exp-list))])
+           (cond [(eq? rand 0) (binop (binops-syms)
+                                      (randomTerm (sub1 maxDepth))
+                                      (randomTerm (sub1 maxDepth)))]
+                 [(eq? rand 1) (lamC (get-lam-symbols sym-list)
+                                     (randomTerm (sub1 maxDepth))) ]
+                 [(eq? rand 2) (if (randomTerm (sub1 maxDepth))
+                                   (randomTerm (sub1 maxDepth))
+                                   (randomTerm (sub1 maxDepth)))]
+                 [(eq? rand 3) (appC (randomTerm (sub1 maxDepth)) (get-appc-expr maxDepth))]))]))
+
+(define (get-lam-symbols [syms : (listof symbol)]) : (listof symbol)
+  (let ([rand (random 3)])
+    (cond [(eq? 0 rand) (list (randomSymbol syms))]
+          [(eq? 1 rand) (list (randomSymbol syms) (randomSymbol syms))]
+          [(eq? 2 rand) (list (randomSymbol syms)
+                              (randomSymbol syms)
+                              (randomSymbol syms))])))
+
+(define (get-appc-expr [maxDepth : number]) : (listof ExprC)
+  (let ([rand (random 3)])
+    (cond [(eq? 0 rand) (list (randomTerm (sub1 maxDepth)))]
+          [(eq? 1 rand) (list (randomTerm (sub1 maxDepth))
+                              (randomTerm (sub1 maxDepth)))]
+          [(eq? 2 rand) (list (randomTerm (sub1 maxDepth))
+                              (randomTerm (sub1 maxDepth))
+                              (randomTerm (sub1 maxDepth)))])))
+ 
+(define syms-list (list '+ '- '* '/))
+(define (binops-syms)
+  (get-single-element syms-list (random (length syms-list))))
+
+(randomTerm (random 3))
+(randomTerm (random 3))
+(randomTerm (random 3))
+
+(define (runTrials [numTrials : number] [depth : number]) : number
+  (/ (run-trials numTrials 0 depth) numTrials))
+
+(define (run-trials [numTrials : number] [success : number] [depth : number]) : number
+  (cond [(eq? numTrials 0) success]
+        [else (let [(truth (try (begin (eval (randomTerm depth) empty) true)
+                                (lambda () false)))]
+                (cond [truth (run-trials (sub1 numTrials) (add1 success) depth)]
+                      [else (run-trials (sub1 numTrials) success depth)]))]))
+
+ 
+(runTrials 50 3)
