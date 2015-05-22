@@ -198,6 +198,11 @@
                        'true
                        'false))
 
+; 3.6 Appends two list together
+(define (append-list [l1 : (listof 'a)] [l2 : (listof 'a)]) : 'a
+  (cond [(empty? l1) l2]
+        [(empty? l2) l1]
+        [else (cons (first l1) (append-list (rest l1) l2))]))
 
 (define (randomSymbol [s : (listof symbol)]) : symbol
   (get-single-element s (random (length s))))
@@ -212,7 +217,7 @@
 (randomSymbol sym-list)
 (randomSymbol sym-list)
 
-
+; Returns finds a random closed term
 (define (randomClosedTerm [ss : (listof symbol)]
                           [bound : (listof symbol)]) : ExprC
   (let ([s (get-single-element ss (random (length ss)))]
@@ -224,25 +229,29 @@
         [(eq? s 'true) (booleanC true)]
         [else (booleanC false)])))
 
-(randomClosedTerm base-list empty)
-(randomClosedTerm base-list empty)
+(randomClosedTerm base-list sym-list)
+(randomClosedTerm base-list sym-list)
 (randomClosedTerm base-list empty)
 (randomClosedTerm base-list empty)
  
-
-(define (randomTerm [maxDepth : number]) : ExprC
-  (cond [(eq? 0 maxDepth) (randomClosedTerm base-list empty)]
+; Finds a random term
+(define (randomTerm [maxDepth : number] [bound : (listof symbol)]) : ExprC
+  (cond [(eq? 0 maxDepth) (randomClosedTerm base-list bound)]
         [else (let ([rand (random (length exp-list))])
            (cond [(eq? rand 0) (binop (binops-syms)
-                                      (randomTerm (sub1 maxDepth))
-                                      (randomTerm (sub1 maxDepth)))]
-                 [(eq? rand 1) (lamC (get-lam-symbols sym-list)
-                                     (randomTerm (sub1 maxDepth))) ]
-                 [(eq? rand 2) (if (randomTerm (sub1 maxDepth))
-                                   (randomTerm (sub1 maxDepth))
-                                   (randomTerm (sub1 maxDepth)))]
-                 [(eq? rand 3) (appC (randomTerm (sub1 maxDepth)) (get-appc-expr maxDepth))]))]))
+                                      (randomTerm (sub1 maxDepth) bound)
+                                      (randomTerm (sub1 maxDepth) bound))]
+                 [(eq? rand 1) 
+                  (let ([symbols (get-lam-symbols sym-list)])
+                    (lamC symbols (randomTerm (sub1 maxDepth) 
+                                              (append-list bound symbols))))]
+                 [(eq? rand 2) (if (randomTerm (sub1 maxDepth) bound)
+                                   (randomTerm (sub1 maxDepth) bound)
+                                   (randomTerm (sub1 maxDepth) bound))]
+                 [(eq? rand 3) (appC (randomTerm (sub1 maxDepth) bound) 
+                                     (get-appc-expr maxDepth bound))]))]))
 
+; get symbols to be used in lamda call
 (define (get-lam-symbols [syms : (listof symbol)]) : (listof symbol)
   (let ([rand (random 3)])
     (cond [(eq? 0 rand) (list (randomSymbol syms))]
@@ -250,30 +259,37 @@
           [(eq? 2 rand) (list (randomSymbol syms)
                               (randomSymbol syms)
                               (randomSymbol syms))])))
-
-(define (get-appc-expr [maxDepth : number]) : (listof ExprC)
+; returns a random list of expressions for appc
+(define (get-appc-expr [maxDepth : number]
+                       [bound : (listof symbol)]) : (listof ExprC)
   (let ([rand (random 3)])
-    (cond [(eq? 0 rand) (list (randomTerm (sub1 maxDepth)))]
-          [(eq? 1 rand) (list (randomTerm (sub1 maxDepth))
-                              (randomTerm (sub1 maxDepth)))]
-          [(eq? 2 rand) (list (randomTerm (sub1 maxDepth))
-                              (randomTerm (sub1 maxDepth))
-                              (randomTerm (sub1 maxDepth)))])))
+    (cond [(eq? 0 rand) (list (randomTerm (sub1 maxDepth) bound))]
+          [(eq? 1 rand) (list (randomTerm (sub1 maxDepth) bound)
+                              (randomTerm (sub1 maxDepth) bound))]
+          [(eq? 2 rand) (list (randomTerm (sub1 maxDepth) bound)
+                              (randomTerm (sub1 maxDepth) bound)
+                              (randomTerm (sub1 maxDepth) bound))])))
  
+; defining symbols list to be used for binop
 (define syms-list (list '+ '- '* '/))
+; call to get  a random symbol
 (define (binops-syms)
   (get-single-element syms-list (random (length syms-list))))
 
-(randomTerm (random 3))
-(randomTerm (random 3))
-(randomTerm (random 3))
+(randomTerm (random 3) sym-list)
+(randomTerm (random 3) sym-list)
+(randomTerm (random 3) sym-list)
+(randomTerm (random 3) empty)
+(randomTerm (random 3) empty)
 
+; runs a number of trials and returns the results
 (define (runTrials [numTrials : number] [depth : number]) : number
   (/ (run-trials numTrials 0 depth) numTrials))
 
+; help function for run trials which does the counting.
 (define (run-trials [numTrials : number] [success : number] [depth : number]) : number
   (cond [(eq? numTrials 0) success]
-        [else (let [(truth (try (begin (eval (randomTerm depth) empty) true)
+        [else (let [(truth (try (begin (eval (randomTerm depth empty) empty) true)
                                 (lambda () false)))]
                 (cond [truth (run-trials (sub1 numTrials) (add1 success) depth)]
                       [else (run-trials (sub1 numTrials) success depth)]))]))
