@@ -1,0 +1,19 @@
+(test (top-eval '{{class Point extends Object
+                    {x y}
+                    {get-x {} x}
+                    {get-y {} y}
+                    {create-point {} {new Point 10 100}}
+                    {set-x {new-x} {x <- new-x}}}
+                  {class 3DPoint extends Point
+                    {z}
+                    {get-z {} z}
+                    {dist-from-zero {}
+                            {with {y = {send this get-y}}
+                                  {kk = {send this create-point}}
+                                  {with {x = {send this get-x}}
+                                        {+ {* z z} 
+                                                 {+ {send kk get-y} 
+                                                    {* x x}}} 
+                                              }}}}
+                  {with {point = {new 3DPoint 5 15 20}}
+                         {send point dist-from-zero}}}) "525")
